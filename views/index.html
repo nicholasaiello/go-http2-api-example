@@ -1,0 +1,132 @@
+{{ define "views/index.html"}}
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="alternate icon" type="image/png" href="/assets/favicon-dark.png">
+  <title>Go Middleware Example</title>
+  <meta name="viewport" content="width=device-width">
+  <style>
+	  table {
+		  width: 100%;
+	  }
+	  th {
+		  text-align: left;
+	  }
+  </style>
+</head>
+<body>
+  <h2>Account > Portfolio</h2>
+  <div id="accounts">
+    No accounts 
+  </div>
+  <div id="portfolio">
+    <table>
+		<tr>
+			<th>Symbol</th>
+			<th>Price Paid</th>
+		</tr>
+		<tbody id="portfolioRows">
+			<!-- rows go here -->
+		</tbody>
+	</table>
+  </div>
+  <script>  
+	window.app = { accounts: [], portfolio: {} };
+
+	const PushModes = { OFF: '', ON: 'push', CHUNKED: 'chunked' };
+
+	const { searchParams: params } = (new URL(document.location));
+
+	const chunkSize = 200;
+	const initialLimit = 100;
+	const portfolioSize = Math.min(params.get('size') || 100, 30000);
+	const pushMode = params.get('push') || PushModes.OFF;
+
+	function fetchAccounts() {
+		return fetch('/api/v1/accounts/')
+			.then(r => r.json())
+	}
+
+	function fetchPortfolio(account, params) {
+		const queryString = [...Object.keys(params)]
+			.map(key => `${key}=${params[key]}`)
+			.join('&');
+
+		return fetch(`/api/v1/portfolios/${account.accountId}?${queryString}`, {
+			headers: {
+				'X-Enable-Push': pushMode,
+				'X-Portfolio-Size': portfolioSize
+			}
+		})
+			.then(r => r.json())
+			.then(data => {
+				console.log('Portfolios: %o', params, data);
+
+				return data;
+			});
+	}
+
+	function appendPositionsRows(positions = [], updatePortfolio = true) {
+		const elem = document.getElementById('portfolioRows');
+
+		updatePortfolio && app.portfolio.positionDetails.push(...positions);
+
+		if (!updatePortfolio) {
+			elem.innerHTML = '';
+		}
+
+		elem.innerHTML += positions.map(({ pricePaid, symbol }) => (
+			`<tr><td>${symbol}</td><td>${pricePaid.toFixed(2)}</td></tr>`)
+		).join('');
+	}
+
+	fetchAccounts()
+		.then(data => {
+			app.accounts = data || [];
+
+			document.getElementById('accounts').innerHTML = '<select id="accountsList">' + 
+				app.accounts.map(({ accountId, accountShortName }) => (`<option value="${accountId}">${accountShortName}</option>`)).join('') + 
+			'</select>';
+
+		    return fetchPortfolio(app.accounts[0], { chunk: chunkSize, limit: initialLimit });
+		})
+		.then(data => {
+			const { positionDetails, totalPositionCount } = data;
+
+			app.portfolio = data;
+
+			appendPositionsRows(positionDetails, false);
+
+			if (pushMode === PushModes.ON) {
+				console.log('[%s] there are %s positions remaining... Making one more request', pushMode, totalPositionCount - initialLimit);
+
+				const newLimit = totalPositionCount - initialLimit;
+
+				if (newLimit <= 0) {
+					return Promise.resolve([]);
+				}
+
+				return fetchPortfolio(app.accounts[0], { start: initialLimit, limit: newLimit })
+					.then(({ positionDetails, totalPositionCount }) => {
+						appendPositionsRows(positionDetails);
+					});
+			}
+
+			const chunks = Math.ceil((totalPositionCount - initialLimit) / chunkSize);
+
+			console.log('[%s] there are %s positions... Making %s requests', pushMode, totalPositionCount, chunks);
+
+			return Promise.all(
+				Array(chunks).fill(0).map((_, i) => (
+					fetchPortfolio(app.accounts[0], { start: initialLimit + (i * chunkSize), limit: chunkSize })
+				))
+			).then(results => {
+				const allPositions = results.flatMap(({ positionDetails }) => positionDetails);
+
+				appendPositionsRows(allPositions);
+			});
+		});
+  </script>
+</body>
+</html>
+{{ end }}
