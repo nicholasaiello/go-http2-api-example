@@ -4,10 +4,10 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	v1 "nicholasaiello/go-middleware-example/routes/api/v1"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	v1 "github.com/nicholasaiello/go-http2-api-example/routes/api/v1"
 )
 
 var (

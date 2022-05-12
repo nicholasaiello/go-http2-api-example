@@ -1,48 +1,34 @@
 package v1
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"nicholasaiello/go-middleware-example/entity"
 )
-
-func CreateTestAccount(description string, mode string, accountStatus string, accountType string) entity.Account {
-	id := CreateRandID(4)
-
-	account := entity.Account{
-		ID:          id,
-		EncodedID:   CreateHash(id),
-		Name:        description + " " + id[4:] + "-" + id[:4],
-		ShortName:   description + " -" + id[:4],
-		Description: description,
-		Mode:        mode,
-		Status:      accountStatus,
-		Type:        accountType,
-		Created:     "11/28/2017",
-	}
-
-	return account
-}
-
-func CreateTestBrokerageAccount() entity.Account {
-	return CreateTestAccount("Individual Brokerage", "CASH", "ACTIVE", "INDIVIDUAL")
-}
-
-func CreateTestAccounts(size int) []entity.Account {
-	var accounts = make([]entity.Account, size)
-	for i := 0; i < size; i++ {
-		accounts[i] = CreateTestBrokerageAccount()
-	}
-	return accounts
-}
 
 var (
 	testAccounts = CreateTestAccounts(5)
 )
 
 func GetAccounts(c *gin.Context) {
+	includePortfolio := c.Query("includePortfolio")
+
+	if pusher := c.Writer.Pusher(); pusher != nil && includePortfolio != "" {
+		selectedAccount := testAccounts[0]
+		options := &http.PushOptions{
+			Header: http.Header{
+				"Accept-Encoding":  c.Request.Header["Accept-Encoding"],
+				"X-Portfolio-Size": c.Request.Header["X-Portfolio-Size"],
+			},
+		}
+
+		portfolioUrl := "/api/v1/portfolios/" + selectedAccount.ID
+		if err := pusher.Push(portfolioUrl, options); err != nil {
+			log.Printf("Failed to push: %v\n", err)
+		}
+	}
+
 	c.JSON(http.StatusOK, testAccounts)
 }
 

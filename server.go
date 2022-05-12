@@ -1,8 +1,6 @@
 package main
 
-import (
-	"nicholasaiello/go-middleware-example/routes"
-)
+import "github.com/nicholasaiello/go-http2-api-example/routes"
 
 const (
 	address = ":8080"
