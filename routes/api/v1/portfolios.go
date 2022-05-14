@@ -11,7 +11,7 @@ import (
 	"github.com/nicholasaiello/go-http2-api-example/entity"
 )
 
-const DEFAULT_LIMIT_QUERY = "100"
+const DEFAULT_LIMIT_QUERY = "150"
 const DEFAULT_PORTFOLIO_SIZE = 5000
 
 var (
@@ -38,8 +38,8 @@ func GetPortfolio(c *gin.Context) {
 	startQuery := c.Query("start")
 
 	// FIXME: hack to toggle Push mode
-	pushRequestHeader := c.Request.Header.Get("X-Enable-Push")
-	enablePusher := pushRequestHeader == "chunked" || pushRequestHeader == "push"
+	enableChunks := c.Request.Header.Get("X-Enable-Chunks") != ""
+	enablePusher := c.Request.Header.Get("X-Enable-Push") != ""
 
 	// FIXME: hack to modify portfolio size
 	portfolioSizeHeader := c.Request.Header.Get("X-Portfolio-Size")
@@ -88,10 +88,14 @@ func GetPortfolio(c *gin.Context) {
 		options := &http.PushOptions{
 			Header: http.Header{
 				"Accept-Encoding": c.Request.Header["Accept-Encoding"],
+				// FIXME: only for testing
+				"X-Portfolio-Size": c.Request.Header["X-Portfolio-Size"],
 			},
 		}
 
-		if pushRequestHeader == "chunked" {
+		urlPath := "/api/v1/portfolios/" + accountId
+
+		if enableChunks {
 			if chunkQuery == "" {
 				chunkQuery = limitQuery
 			}
@@ -99,11 +103,11 @@ func GetPortfolio(c *gin.Context) {
 			chunk, _ := strconv.Atoi(chunkQuery)
 			chunks := float64(totalPositions-limit) / float64(chunk)
 
-			log.Printf("Creating preload request for %d chunks", int(math.Round(chunks)))
+			log.Printf("Creating preload request for %d chunks, for %d/%d positions", int(math.Ceil(chunks)), totalPositions-limit, totalPositions)
 
-			CreateChunkedPortfolioPushRequests(pusher, "/api/v1/portfolios/"+accountId, start+limit, chunk, int(math.Round(chunks)), options)
+			CreateChunkedPortfolioPushRequests(pusher, urlPath, start+limit, chunk, int(math.Ceil(chunks)), options)
 		} else {
-			CreatePortfolioPushRequest(pusher, "/api/v1/portfolios/"+accountId, start+limit, totalPositions-limit, options)
+			CreatePortfolioPushRequest(pusher, urlPath, start+limit, totalPositions-limit, options)
 		}
 	}
 

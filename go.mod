@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/gin-contrib/gzip v0.0.5
 	github.com/gin-gonic/gin v1.7.7
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 )
 
 require (

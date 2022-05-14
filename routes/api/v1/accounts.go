@@ -12,9 +12,9 @@ var (
 )
 
 func GetAccounts(c *gin.Context) {
-	includePortfolio := c.Query("includePortfolio")
+	includePortfolio := c.Query("includePortfolio") != ""
 
-	if pusher := c.Writer.Pusher(); pusher != nil && includePortfolio != "" {
+	if pusher := c.Writer.Pusher(); pusher != nil && includePortfolio {
 		selectedAccount := testAccounts[0]
 		options := &http.PushOptions{
 			Header: http.Header{

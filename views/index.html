@@ -1,103 +1,19 @@
 {{ define "views/index.html"}}
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <link rel="alternate icon" type="image/png" href="/assets/favicon-dark.png">
-  <title>HTTP2 Push Example</title>
-  <meta name="viewport" content="width=device-width">
-  <style>
-	  table {
-		  width: 100%;
-	  }
-	  th {
-		  text-align: left;
-	  }
-  </style>
+  {{ template "views/_head.html" .}}
 </head>
 <body>
-  <h2>Account > Portfolio</h2>
-  <div id="accounts">
-    No accounts 
-  </div>
-  <div id="portfolio">
-    <table>
-		<tr>
-			<th>Symbol</th>
-			<th>Price Paid</th>
-		</tr>
-		<tbody id="portfolioRows">
-			<tr>
-				<td colspan="2">
-					Loading...
-				</td>
-			</tr>
-		</tbody>
-	</table>
-  </div>
+  {{ template "views/_body.html" .}}
+  {{ template "views/_body_script.html" .}}
   <script>  
-	window.app = { accounts: [], portfolio: {} };
-
-	const PushModes = { OFF: '', ON: 'push', CHUNKED: 'chunked' };
-
-	const { searchParams: params } = (new URL(document.location));
-
-	const chunkSize = 200;
-	const initialLimit = 100;
-
-	const includePortfolio = params.get('includePortfolio');
-	const portfolioSize = Math.min(params.get('size') || 100, 30000);
-	const pushMode = params.get('push') || PushModes.OFF;
-
-	function fetchAccounts(queryString = '') {
-		return fetch('/api/v1/accounts' + queryString, {
-			headers: {
-				'X-Portfolio-Size': portfolioSize
-			}
-		})
-			.then(r => r.json())
-	}
-
-	function fetchPortfolio(account, params = {}) {
-		const queryString = [...Object.keys(params)]
-			.map(key => `${key}=${params[key]}`)
-			.join('&');
-
-		return fetch(`/api/v1/portfolios/${account.accountId}${queryString && '?' + queryString}`, {
-			headers: {
-				'X-Enable-Push': pushMode,
-				'X-Portfolio-Size': portfolioSize
-			}
-		})
-			.then(r => r.json());
-			// .then(data => {
-			// 	console.log('Portfolios: %o', params, data);
-
-			// 	return data;
-			// });
-	}
-
-	function appendPositionsRows(positions = [], updatePortfolio = true) {
-		const elem = document.getElementById('portfolioRows');
-
-		updatePortfolio && app.portfolio.positionDetails.push(...positions);
-
-		if (!updatePortfolio) {
-			elem.innerHTML = '';
-		}
-
-		elem.innerHTML += positions.map(({ pricePaid, symbol }) => (
-			`<tr><td>${symbol}</td><td>${pricePaid.toFixed(2)}</td></tr>`)
-		).join('');
-	}
-
 	function getAccountsAndBoundedPortfolio() {
 		fetchAccounts()
 			.then(data => {
 				app.accounts = data || [];
 
-				document.getElementById('accounts').innerHTML = '<select id="accountsList">' + 
-					app.accounts.map(({ accountId, accountShortName }) => (`<option value="${accountId}">${accountShortName}</option>`)).join('') + 
-				'</select>';
+				setAccountsDropdown('accounts', app.accounts);
 
 				return fetchPortfolio(app.accounts[0], { chunk: chunkSize, limit: initialLimit });
 			})

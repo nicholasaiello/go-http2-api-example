@@ -1,0 +1,46 @@
+{{ define "views/incremental.html" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{ template "views/_head.html" .}}
+</head>
+<body>
+  {{ template "views/_body.html" .}}
+  {{ template "views/_body_script.html" .}}
+  <script>  
+    function getAccountsAndSelectedPortfolio() {
+		fetchAccounts(includePortfolio ? '?includePortfolio=1' : '', { 'X-Portfolio-Size': portfolioSize })
+			.then(data => {
+				app.accounts = data || [];
+
+				setAccountsDropdown('accounts', app.accounts);
+
+				return fetchPortfolio(app.accounts[0], { chunk: chunkSize, limit: initialLimit });
+			})
+			.then(data => {
+				const { positionDetails, totalPositionCount } = data;
+
+				app.portfolio = data;
+
+				appendPositionsRows(positionDetails, false);
+
+				console.log('[%s] there are %d positions remaining... Making one more request', pushMode, totalPositionCount - initialLimit);
+
+				const newLimit = totalPositionCount - initialLimit;
+
+				if (newLimit <= 0) {
+					return Promise.resolve([]);
+				}
+
+				return fetchPortfolio(app.accounts[0], { start: initialLimit, limit: newLimit })
+					.then(({ positionDetails, totalPositionCount }) => {
+						appendPositionsRows(positionDetails);
+					});
+			});
+	}
+    
+    getAccountsAndSelectedPortfolio();
+  </script>
+</body>
+</html>
+{{ end }}

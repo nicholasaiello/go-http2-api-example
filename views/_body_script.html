@@ -1,0 +1,69 @@
+{{ define "views/_body_script.html" }}
+    <script>
+        window.app = {
+            accounts: [],
+            portfolio: {}
+        };
+
+        const ChunksModes = {
+            OFF: '',
+            ON: 'chunks'
+        };
+
+        const PushModes = {
+            OFF: '',
+            ON: 'push'
+        };
+
+        const { searchParams: params } = (new URL(document.location));
+
+        const chunkSize = 150;
+        const initialLimit = 50;
+
+        const chunksMode = params.get('chunks') || ChunksModes.OFF;
+        const includePortfolio = params.get('includePortfolio');
+        const portfolioSize = Math.min(params.get('size') || 100, 30000);
+        const pushMode = params.get('push') || PushModes.OFF;
+
+        function fetchAccounts(queryString = '', headers = {}) {
+            return fetch('/api/v1/accounts' + queryString, { headers })
+                .then(r => r.json())
+        }
+
+        function fetchPortfolio(account, params = {}, headers = {}) {
+            const queryString = [...Object.keys(params)]
+                .map(key => `${key}=${params[key]}`)
+                .join('&');
+
+            return fetch(`/api/v1/portfolios/${account.accountId}${queryString && '?' + queryString}`, {
+                headers: {
+                    'X-Enable-Chunks': chunksMode,
+                    'X-Enable-Push': pushMode,
+                    'X-Portfolio-Size': portfolioSize,
+                    ...headers
+                }
+            })
+                .then(r => r.json());
+        }
+
+        function setAccountsDropdown(elemId, accounts) {
+            document.getElementById(elemId).innerHTML = '<select id="accountsList">' + 
+					accounts.map(({ accountId, accountShortName }) => (`<option value="${accountId}">${accountShortName}</option>`)).join('') + 
+				'</select>';
+        }
+
+        function appendPositionsRows(positions = [], updatePortfolio = true) {
+            const elem = document.getElementById('portfolioRows');
+
+            updatePortfolio && app.portfolio.positionDetails.push(...positions);
+
+            if (!updatePortfolio) {
+                elem.innerHTML = '';
+            }
+
+            elem.innerHTML += positions.map(({ pricePaid, symbol }) => (
+                `<tr><td>${symbol}</td><td>${pricePaid.toFixed(2)}</td></tr>`)
+            ).join('');
+        }
+    </script>
+{{ end }}

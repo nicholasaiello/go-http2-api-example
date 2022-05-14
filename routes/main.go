@@ -11,14 +11,11 @@ import (
 )
 
 var (
-	router = gin.Default()
-
 	html = template.Must(template.New("").ParseGlob("views/*.html"))
 )
 
 func GetIndex(c *gin.Context) {
-	pushRequestHeader := c.Request.Header.Get("X-Enable-Push")
-	enablePusher := pushRequestHeader == "chunked" || pushRequestHeader == "push"
+	enablePusher := c.Request.Header.Get("X-Enable-Push") != ""
 
 	if pusher := c.Writer.Pusher(); pusher != nil && enablePusher {
 		options := &http.PushOptions{
@@ -30,24 +27,69 @@ func GetIndex(c *gin.Context) {
 			log.Printf("Failed to push: %v\n", err)
 		}
 	}
-	c.HTML(http.StatusOK, "views/index.html", gin.H{"status": "success"})
+	c.HTML(http.StatusOK, "views/index.html", gin.H{
+		"status": "success",
+		"title":  "Test",
+	})
 }
 
-func Run(address string) {
+func GetChunked(c *gin.Context) {
+	enablePusher := c.Request.Header.Get("X-Enable-Push") != ""
+
+	if pusher := c.Writer.Pusher(); pusher != nil && enablePusher {
+		options := &http.PushOptions{
+			Header: http.Header{
+				"Accept-Encoding": c.Request.Header["Accept-Encoding"],
+			},
+		}
+		if err := pusher.Push("/api/v1/accounts/", options); err != nil {
+			log.Printf("Failed to push: %v\n", err)
+		}
+	}
+	c.HTML(http.StatusOK, "views/chunked.html", gin.H{
+		"status": "success",
+		"title":  "Test Chunked Request",
+	})
+}
+
+func GetIncremental(c *gin.Context) {
+	enablePusher := c.Request.Header.Get("X-Enable-Push") != ""
+
+	if pusher := c.Writer.Pusher(); pusher != nil && enablePusher {
+		options := &http.PushOptions{
+			Header: http.Header{
+				"Accept-Encoding": c.Request.Header["Accept-Encoding"],
+				"X-Enable-Push":   c.Request.Header["X-Enable-Push"],
+			},
+		}
+		if err := pusher.Push("/api/v1/accounts/", options); err != nil {
+			log.Printf("Failed to push: %v\n", err)
+		}
+	}
+	c.HTML(http.StatusOK, "views/incremental.html", gin.H{
+		"status": "success",
+		"title":  "Test Incremental Request",
+	})
+}
+
+func Router() *gin.Engine {
+	router := gin.Default()
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedExtensions([]string{".mp4"})))
 
 	router.SetHTMLTemplate(html)
 	router.Static("/assets", "./assets")
 
-	createRoutes()
+	createRoutes(router)
 
-	router.RunTLS(address, "./server.crt", "./server.key")
+	return router
 }
 
-func createRoutes() {
-	router.GET("/", GetIndex)
+func createRoutes(r *gin.Engine) {
+	r.GET("/", GetIndex)
+	r.GET("/chunked", GetChunked)
+	r.GET("/incremental", GetIncremental)
 
-	apiv1 := router.Group("/api/v1")
+	apiv1 := r.Group("/api/v1")
 	// apiv1.Use(jwt.JWT())
 
 	// accounts := apiv1.Group("/accounts")
