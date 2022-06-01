@@ -52,7 +52,15 @@
 				'</select>';
         }
 
-        function appendPositionsRows(positions = [], updatePortfolio = true) {
+        const mapObjectPositionRow = ({ pricePaid, symbol }) => (
+                `<tr><td>${symbol}</td><td>${pricePaid.toFixed(2)}</td></tr>`
+        );
+
+        const mapProtoPositionRow = position => (
+                `<tr><td>${position.getSymbol()}</td><td>${position.getPricePaid().toFixed(2)}</td></tr>`
+        );
+
+        function appendPositionsRows(positions = [], updatePortfolio = true, mapper = mapObjectPositionRow) {
             const elem = document.getElementById('portfolioRows');
 
             updatePortfolio && app.portfolio.positionDetails.push(...positions);
@@ -61,9 +69,7 @@
                 elem.innerHTML = '';
             }
 
-            elem.innerHTML += positions.map(({ pricePaid, symbol }) => (
-                `<tr><td>${symbol}</td><td>${pricePaid.toFixed(2)}</td></tr>`)
-            ).join('');
+            elem.innerHTML += positions.map(mapper).join('');
         }
     </script>
 {{ end }}

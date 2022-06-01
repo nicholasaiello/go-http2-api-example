@@ -1,0 +1,14 @@
+{{ define "views/grpc.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{ template "views/_head.html" .}}
+  <link rel="preload" href="/assets/main.js" as="script">
+</head>
+<body>
+  {{ template "views/_body.html" .}}
+  {{ template "views/_body_script.html" .}}
+  <script src="/assets/main.js"></script>
+</body>
+</html>
+{{ end }}

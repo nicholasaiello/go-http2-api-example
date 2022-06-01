@@ -28,7 +28,7 @@ func CreateTestPosition(id string) entity.Position {
 }
 
 func CreateTestPositions(size int) []entity.Position {
-	var positions = make([]entity.Position, size)
+	positions := make([]entity.Position, size)
 	for i := 0; i < size; i++ {
 		positions[i] = CreateTestPosition("")
 	}

@@ -1,7 +1,22 @@
 ### Generate New Certs
-Run the following, and specify `localhost` for the Company Name:
+Run the following, and specify your local domain `example.com` for the Company Name:
 ```sh
 $ openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -keyout server.key -out server.crt
+```
+
+### Build protobuf
+Server
+```sh
+$ protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    proto/holdings.proto 
+```
+
+Client
+```sh
+$ protoc -I=./proto holdings.proto  \
+    --js_out=import_style=commonjs:./client/js \
+    --grpc-web_out=import_style=commonjs,mode=grpcwebtext:./client/js
 ```
 
 ### Configure Response
@@ -27,3 +42,4 @@ const ChunkModes = {
 
 #### `size`
 Adjust how many total results are returned
+

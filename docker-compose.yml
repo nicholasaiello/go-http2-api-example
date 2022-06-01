@@ -1,0 +1,48 @@
+version: '3'
+services:
+  gin-server:
+    build:
+      context: ./
+      dockerfile: ./docker/server/Dockerfile
+    #image: grpcweb/envoy
+    #network_mode: host
+    networks:
+    - envoymesh
+    expose:
+      - 8080
+      - 8443
+      - 9080
+      - 9443
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+      - "9080:9080"
+      - "9443:9443"
+    #volumes:
+    #- ./service.py:/code/service.py
+
+  envoy:
+    build:
+      context: ./
+      dockerfile: ./docker/envoy/Dockerfile
+    #image: grpcweb/envoy
+    #network_mode: host
+    networks:
+    - envoymesh
+    expose:
+      - 80
+      - 5443
+      - 8081
+      - 8082
+      - 9901
+    ports:
+      - "80:80"
+      - "5443:5443"
+      - "8081:8081"
+      - "8082:8082"
+      - "9901:9901"
+    links:
+      - gin-server
+
+networks:
+  envoymesh: {}

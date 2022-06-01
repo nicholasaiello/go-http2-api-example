@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option go_package = "github.com/nicholasaiello/go-http2-api-example/proto";
+
+package proto;
+
+service AccountHoldings {
+    // Return a portfolio (holdings)
+    rpc GetHoldings(Account) returns (Holdings) {}
+
+    // Return a holding/position
+    rpc GetHolding(Holding) returns (Holding) {}
+
+    // Return positions within a portfolio (holdings)
+    rpc ListHoldings(Account) returns (stream Holding) {}
+}
+
+message Account {
+    string id = 1;
+    string encoded_id = 2;
+    string name = 3;
+    string short_name = 4;
+    string description = 5;
+    string mode = 6;
+    string status = 7;
+    string type = 8;
+    string created = 9;
+}
+
+message Lot {
+    string id = 1;
+    int32 quantity = 2;
+    float price_paid = 3;
+    float total_cost = 4;
+    string acquired_date = 5;
+}
+
+message Holding {
+    string id = 1;
+    string symbol = 2;
+    repeated Lot lots = 3;
+    int32 quantity = 4;
+    float price_paid = 5;
+    float total_cost = 6;
+    string last_trade_date = 7;
+    string acquired_date = 8;
+}
+
+message Holdings {
+    string id = 1;
+    repeated Holding positions = 2;
+    int32 total_positions_count = 3;
+    string view_name = 4;
+    string last_updated = 5;
+}
